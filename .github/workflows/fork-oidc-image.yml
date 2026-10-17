@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: 2026 Sofie Finnes <sofie+git@finnes.dev>
+# SPDX-License-Identifier: AGPL-3.0-only
+name: Publish fork OIDC image
+on:
+  push:
+    branches: [build/oidc-picture-release]
+permissions: {}
+jobs:
+  publish:
+    if: github.repository == 'soupglasses/grafana'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download verified release artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v13.2.4-oidc.1 --repo soupglasses/grafana \
+            --pattern 'grafana-13.2.4-oidc.1-*' --pattern oidc-picture.patch \
+            --pattern Dockerfile --pattern SHA256SUMS
+          sha256sum --check SHA256SUMS
+          gzip --decompress --stdout grafana-13.2.4-oidc.1-linux-amd64.gz > grafana
+          chmod 0755 grafana
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Publish image
+        run: |
+          docker build --build-arg COMMIT_SHA=89c2ebbeac98fcc251b0766861cd77af425fdfbe \
+            --tag ghcr.io/soupglasses/grafana:13.2.4-oidc.1 .
+          docker push ghcr.io/soupglasses/grafana:13.2.4-oidc.1
