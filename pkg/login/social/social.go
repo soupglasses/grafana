@@ -137,6 +137,7 @@ func (o *OAuthInfo) IsAllowAssignGrafanaAdminEnabled() bool {
 }
 
 type BasicUserInfo struct {
+	AvatarURL      string
 	Id             string
 	Name           string
 	Email          string

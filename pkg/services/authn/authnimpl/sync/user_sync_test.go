@@ -2819,3 +2819,24 @@ func TestUserSync_SyncUserHook_SkipsAnonymousIdentity(t *testing.T) {
 	assert.False(t, createCalled, "anonymous identity must not create a user")
 	assert.False(t, updateCalled, "anonymous identity must not update a user")
 }
+
+func TestUserSync_AuthConnectionAvatar(t *testing.T) {
+	provider.UsingFlags(t, defaultFeatureFlags)
+	picture := "https://idp.example/photo/alice"
+	service := &authinfotest.FakeService{
+		SetAuthInfoFn: func(_ context.Context, cmd *login.SetAuthInfoCommand) error {
+			assert.Equal(t, picture, cmd.AvatarURL)
+			return nil
+		},
+		UpdateAuthInfoFn: func(_ context.Context, cmd *login.UpdateAuthInfoCommand) error {
+			require.NotNil(t, cmd.AvatarURL)
+			assert.Equal(t, picture, *cmd.AvatarURL)
+			return nil
+		},
+	}
+	sync := &UserSync{authInfoService: service, tracer: tracing.InitializeTracerForTest(), openFeatureClient: openfeature.NewDefaultClient(),
+		features: featuremgmt.WithFeatures(), log: log.New("test")}
+	id := &authn.Identity{AuthenticatedBy: login.GenericOAuthModule, AvatarURL: picture}
+	require.NoError(t, sync.upsertAuthConnection(t.Context(), &user.User{ID: 42}, id, true))
+	require.NoError(t, sync.upsertAuthConnection(t.Context(), &user.User{ID: 42}, id, false))
+}

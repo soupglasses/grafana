@@ -157,6 +157,7 @@ func TestIntegrationUserAPIEndpoint_userLoggedIn(t *testing.T) {
 		resp.UpdatedAt = fakeNow
 		resp.AvatarURL = avatarUrl
 		require.EqualValues(t, expected, resp)
+
 	}, mock)
 
 	loggedInUserScenario(t, "When calling GET on", "/api/users/lookup", "/api/users/lookup", func(sc *scenarioContext) {
@@ -542,12 +543,14 @@ func TestMiddlewareUserUIDResolver_ErrorMapping(t *testing.T) {
 
 func Test_GetUserByID_ExternalAuthInfoFromSpec(t *testing.T) {
 	testcases := []struct {
+		avatarURL                  string
 		name                       string
 		authModules                []string
 		samlEnabled                bool
 		samlSkipOrgRoleSync        bool
 		expectedIsExternallySynced bool
 	}{
+		{name: "OIDC picture", authModules: []string{login.GenericOAuthModule}, avatarURL: "https://idp.example/photo/alice"},
 		{
 			name:                       "auth proxy module marks the user external but not externally synced",
 			authModules:                []string{login.AuthProxyAuthModule},
@@ -573,6 +576,9 @@ func Test_GetUserByID_ExternalAuthInfoFromSpec(t *testing.T) {
 			// user_auth returns not-found, so auth flags must come from the Kubernetes
 			// spec.externalAuthInfo modules, not the legacy fallback.
 			authInfoService := &authinfotest.FakeService{ExpectedError: user.ErrUserNotFound}
+			if tc.avatarURL != "" {
+				authInfoService = &authinfotest.FakeService{ExpectedUserAuth: &login.UserAuth{AvatarURL: tc.avatarURL}}
+			}
 			userService := &usertest.FakeUserService{ExpectedUserProfileDTO: &user.UserProfileDTO{AuthModules: tc.authModules}}
 			authnService := &authntest.FakeService{
 				ExpectedClientConfig: &authntest.FakeSSOClientConfig{
@@ -609,6 +615,11 @@ func Test_GetUserByID_ExternalAuthInfoFromSpec(t *testing.T) {
 				expectedLabels = append(expectedLabels, login.GetAuthProviderLabel(m))
 			}
 
+			if tc.avatarURL != "" {
+				assert.Equal(t, tc.avatarURL, resp.AvatarURL)
+			} else {
+				assert.Equal(t, dtos.GetGravatarUrl(hs.Cfg, ""), resp.AvatarURL)
+			}
 			assert.True(t, resp.IsExternal, "user with spec auth modules must be external")
 			assert.Equal(t, expectedLabels, resp.AuthLabels)
 			assert.Equal(t, tc.expectedIsExternallySynced, resp.IsExternallySynced)

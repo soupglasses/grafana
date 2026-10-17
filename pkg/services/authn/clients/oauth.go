@@ -212,6 +212,7 @@ func (c *OAuth) Authenticate(ctx context.Context, r *authn.Request) (*authn.Iden
 	return &authn.Identity{
 		Login:           userInfo.Login,
 		Name:            userInfo.Name,
+		AvatarURL:       userInfo.AvatarURL,
 		Email:           userInfo.Email,
 		IsGrafanaAdmin:  userInfo.IsGrafanaAdmin,
 		AuthenticatedBy: c.moduleName,

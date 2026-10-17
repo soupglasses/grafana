@@ -38,6 +38,8 @@ type Identity struct {
 	Login string
 	// Name is the display name of the entity. It is not guaranteed to be unique.
 	Name string
+	// AvatarURL is the profile picture asserted by the external identity provider.
+	AvatarURL string
 	// Email is the email address of the entity. Should be unique.
 	Email string
 	// EmailVerified is true if entity has verified their email with grafana.

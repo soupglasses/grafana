@@ -156,6 +156,7 @@ func (s *Store) SetAuthInfo(ctx context.Context, cmd *login.SetAuthInfoCommand) 
 	authUser := &login.UserAuth{
 		UserId:      cmd.UserId,
 		UserUID:     cmd.UserUID,
+		AvatarURL:   cmd.AvatarURL,
 		AuthModule:  cmd.AuthModule,
 		AuthId:      cmd.AuthId,
 		ExternalUID: cmd.ExternalUID,
@@ -267,9 +268,12 @@ func (s *Store) UpdateAuthInfo(ctx context.Context, cmd *login.UpdateAuthInfoCom
 	}
 
 	return dbHelper.DB.WithTransactionalDbSession(ctx, func(sess *db.Session) error {
-		upd, err := sess.Table(dbHelper.Table("user_auth")).MustCols("o_auth_expiry", "o_auth_access_token", "o_auth_refresh_token", "o_auth_id_token", "o_auth_token_type").
-			Where("user_id = ? AND auth_module = ?", cmd.UserId, cmd.AuthModule).
-			Update(authUser)
+		q := sess.Table(dbHelper.Table("user_auth")).MustCols("o_auth_expiry", "o_auth_access_token", "o_auth_refresh_token", "o_auth_id_token", "o_auth_token_type")
+		if cmd.AvatarURL != nil {
+			authUser.AvatarURL = *cmd.AvatarURL
+			q = q.MustCols("avatar_url")
+		}
+		upd, err := q.Where("user_id = ? AND auth_module = ?", cmd.UserId, cmd.AuthModule).Update(authUser)
 
 		s.logger.FromContext(ctx).Debug("Updated user_auth", "user_id", cmd.UserId, "auth_id", cmd.AuthId, "auth_module", cmd.AuthModule, "rows", upd)
 

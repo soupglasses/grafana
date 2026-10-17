@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/mail"
+	"net/url"
 	"strconv"
 
 	"golang.org/x/oauth2"
@@ -208,6 +209,7 @@ func (s *SocialGenericOAuth) isOrganizationMember(ctx context.Context, client *h
 }
 
 type UserInfoJson struct {
+	Picture     string              `json:"picture"`
 	Sub         string              `json:"sub"`
 	Name        string              `json:"name"`
 	DisplayName string              `json:"display_name"`
@@ -304,6 +306,12 @@ func (s *SocialGenericOAuth) buildUserInfo(logger log.Logger, dataSources []*Use
 
 // extractBasicUserFields extracts basic user fields (ID, Name, Login, Email) from data
 func (s *SocialGenericOAuth) extractBasicUserFields(logger log.Logger, userInfo *social.BasicUserInfo, data *UserInfoJson) {
+	if userInfo.AvatarURL == "" {
+		if picture, err := url.Parse(data.Picture); err == nil && picture.Scheme == "https" && picture.Hostname() != "" && picture.User == nil {
+			userInfo.AvatarURL = picture.String()
+		}
+	}
+
 	if userInfo.Id == "" {
 		userInfo.Id = data.Sub
 	}

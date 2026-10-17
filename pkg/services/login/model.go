@@ -18,6 +18,7 @@ type UserAuth struct {
 	UserUID           string `xorm:"user_uid"`
 	AuthModule        string
 	AuthId            string
+	AvatarURL         string `xorm:"avatar_url"`
 	Created           time.Time
 	OAuthAccessToken  string
 	OAuthRefreshToken string
@@ -74,6 +75,7 @@ type RequestURIKey struct{}
 // COMMANDS
 
 type SetAuthInfoCommand struct {
+	AvatarURL   string
 	AuthModule  string
 	AuthId      string
 	UserId      int64
@@ -83,6 +85,7 @@ type SetAuthInfoCommand struct {
 }
 
 type UpdateAuthInfoCommand struct {
+	AvatarURL   *string
 	AuthModule  string
 	AuthId      string
 	UserId      int64

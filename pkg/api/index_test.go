@@ -16,6 +16,8 @@ import (
 	contextmodel "github.com/grafana/grafana/pkg/services/contexthandler/model"
 	"github.com/grafana/grafana/pkg/services/featuremgmt"
 	"github.com/grafana/grafana/pkg/services/hooks"
+	"github.com/grafana/grafana/pkg/services/login"
+	"github.com/grafana/grafana/pkg/services/login/authinfotest"
 	"github.com/grafana/grafana/pkg/services/navtree"
 	"github.com/grafana/grafana/pkg/services/org/orgtest"
 	pref "github.com/grafana/grafana/pkg/services/preference"
@@ -67,6 +69,7 @@ func TestIntegrationSetIndexViewData_clientNavTree(t *testing.T) {
 		cfg.Env = setting.Dev
 		cfg.StaticRootPath = "webassets/testdata"
 		cfg.DefaultTheme = "dark"
+		cfg.DisableGravatar = true
 
 		_, hs := setupTestEnvironment(t, cfg, featuremgmt.WithFeatures(), nil, nil, nil)
 		navService := &fakeNavTreeService{}
@@ -77,10 +80,11 @@ func TestIntegrationSetIndexViewData_clientNavTree(t *testing.T) {
 		hs.HooksService = hooks.ProvideService()
 		hs.orgService = &orgtest.FakeOrgService{}
 		hs.accesscontrolService = accesscontrolmock.New()
+		hs.authInfoService = &authinfotest.FakeService{ExpectedUserAuth: &login.UserAuth{AvatarURL: "https://idp.example/photo/alice"}}
 
 		c := &contextmodel.ReqContext{
 			Context:      &web.Context{Req: httptest.NewRequest(http.MethodGet, "/", nil)},
-			SignedInUser: &user.SignedInUser{OrgID: 1},
+			SignedInUser: &user.SignedInUser{UserID: 42, OrgID: 1},
 			IsSignedIn:   true,
 			Logger:       log.New("index-test"),
 		}
@@ -126,6 +130,7 @@ func TestIntegrationSetIndexViewData_clientNavTree(t *testing.T) {
 
 			data, err := hs.setIndexViewData(c)
 			require.NoError(t, err)
+			assert.Equal(t, "https://idp.example/photo/alice", data.User.GravatarUrl)
 
 			navTreeJSON, err := json.Marshal(data.NavTree)
 			require.NoError(t, err)

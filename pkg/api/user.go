@@ -100,9 +100,19 @@ func (hs *HTTPServer) getUserUserProfile(c *contextmodel.ReqContext, userID int6
 	}
 
 	userProfile.AccessControl = getAccessControlMetadata(c, "global.users:id:", strconv.FormatInt(userID, 10))
-	userProfile.AvatarURL = dtos.GetGravatarUrl(hs.Cfg, userProfile.Email)
+	userProfile.AvatarURL = hs.getUserAvatarURL(c.Req.Context(), userID, userProfile.Email)
 
 	return response.JSON(http.StatusOK, userProfile)
+}
+
+func (hs *HTTPServer) getUserAvatarURL(ctx context.Context, userID int64, email string) string {
+	if userID > 0 {
+		info, err := hs.authInfoService.GetAuthInfo(ctx, &login.GetAuthInfoQuery{UserId: userID, AuthModule: login.GenericOAuthModule})
+		if err == nil && info != nil && info.AvatarURL != "" {
+			return info.AvatarURL
+		}
+	}
+	return dtos.GetGravatarUrl(hs.Cfg, email)
 }
 
 // swagger:route GET /users/lookup users getUserByLoginOrEmail

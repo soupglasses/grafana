@@ -325,3 +325,26 @@ func countEntries(t *testing.T, sql db.DB, authModule, authID string, userID int
 	require.NoError(t, err)
 	return result
 }
+
+func TestIntegrationAuthInfoAvatar(t *testing.T) {
+	testutil.SkipIntegrationTestInShortMode(t)
+	ctx := t.Context()
+	sql := db.InitTestDB(t) //nolint:staticcheck // Match the existing auth-info integration fixture.
+	store, err := ProvideStore(ctx, legacysql.NewDatabaseProvider(sql), secretstest.NewFakeSecretsService())
+	require.NoError(t, err)
+	picture := "https://idp.example/photo/alice"
+	require.NoError(t, store.SetAuthInfo(ctx, &login.SetAuthInfoCommand{
+		UserId: 42, UserUID: "alice", AuthModule: login.GenericOAuthModule, AvatarURL: picture,
+	}))
+	for _, next := range []*string{nil, new("https://idp.example/photo/updated"), new("")} {
+		require.NoError(t, store.UpdateAuthInfo(ctx, &login.UpdateAuthInfoCommand{
+			UserId: 42, AuthModule: login.GenericOAuthModule, AvatarURL: next,
+		}))
+		if next != nil {
+			picture = *next
+		}
+		info, err := store.GetAuthInfo(ctx, &login.GetAuthInfoQuery{UserId: 42, AuthModule: login.GenericOAuthModule})
+		require.NoError(t, err)
+		assert.Equal(t, picture, info.AvatarURL)
+	}
+}

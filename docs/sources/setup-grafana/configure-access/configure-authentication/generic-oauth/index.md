@@ -37,6 +37,14 @@ If your OAuth2 provider is not listed, you can use Generic OAuth authentication.
 
 This topic describes how to configure Generic OAuth authentication using different methods and includes [examples of setting up Generic OAuth](#examples-of-setting-up-generic-oauth) with specific OAuth2 providers.
 
+## Profile pictures
+
+Grafana uses the HTTPS URL in the standard OIDC `picture` claim for the signed-in user's profile and navigation avatar.
+Request the `profile` scope to receive this claim. Grafana checks the ID token, UserInfo response, then access token, using the first valid picture URL.
+The picture is synchronized at login. If the claim is absent or invalid, Grafana uses its existing avatar fallback.
+Pictures load directly in the browser, so the URL must be accessible to users and permitted by your Content Security Policy.
+The `disable_gravatar` setting only disables Gravatar; it does not disable identity provider pictures.
+
 ## Before you begin
 
 To follow this guide:

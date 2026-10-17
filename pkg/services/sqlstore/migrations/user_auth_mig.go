@@ -79,4 +79,8 @@ func addUserAuthMigrations(mg *Migrator) {
 			SET user_auth.user_uid = user.uid
 			WHERE user_auth.user_uid IS NULL
 		`))
+
+	mg.AddMigration("Add avatar_url to user_auth", NewAddColumnMigration(userAuthV1, &Column{
+		Name: "avatar_url", Type: DB_Text, Nullable: true,
+	}))
 }

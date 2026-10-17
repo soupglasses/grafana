@@ -3,6 +3,7 @@ package connectors
 import (
 	"context"
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -1612,6 +1613,39 @@ func TestSocialGenericOAuth_extractFromIDToken_WithIDTokenValidation(t *testing.
 			} else {
 				require.Nil(t, userInfo, "Expected nil data but got user data")
 			}
+		})
+	}
+}
+
+func TestGenericOAuthPicture(t *testing.T) {
+	for _, tc := range []struct {
+		name, idPicture, apiPicture, want string
+	}{
+		{"userinfo", "", "https://idp.example/photo/alice", "https://idp.example/photo/alice"},
+		{"id token takes precedence", "https://idp.example/photo/token", "https://idp.example/photo/api", "https://idp.example/photo/token"},
+		{"missing", "", "", ""},
+		{"relative", "", "/photo/alice", ""},
+		{"insecure", "", "http://idp.example/photo/alice", ""},
+		{"credentials", "", "https://alice:password@idp.example/photo", ""},
+		{"invalid", "", "https://%", ""},
+		{"unsafe scheme", "", "javascript:alert(1)", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				require.NoError(t, json.NewEncoder(w).Encode(map[string]string{"sub": "alice", "picture": tc.apiPicture}))
+			}))
+			t.Cleanup(server.Close)
+			cfg := setting.NewCfg()
+			provider := NewGenericOAuthProvider(&social.OAuthInfo{ApiUrl: server.URL}, cfg,
+				ProvideOrgRoleMapper(cfg, orgtest.NewOrgServiceFake()), ssosettingstests.NewFakeService(), featuremgmt.WithFeatures(), nil)
+			claims, err := json.Marshal(map[string]string{"sub": "alice", "picture": tc.idPicture})
+			require.NoError(t, err)
+			token := (&oauth2.Token{AccessToken: "fixture"}).WithExtra(map[string]any{
+				"id_token": "eyJhbGciOiJIUzI1NiJ9." + base64.RawURLEncoding.EncodeToString(claims) + ".Zml4dHVyZQ",
+			})
+			info, err := provider.UserInfo(t.Context(), server.Client(), token)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, info.AvatarURL)
 		})
 	}
 }

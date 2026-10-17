@@ -477,6 +477,7 @@ func (s *UserSync) upsertAuthConnection(ctx context.Context, usr *user.User, ide
 	// changing to new auth client
 	if createConnection {
 		setAuthInfoCmd := &login.SetAuthInfoCommand{
+			AvatarURL:  identity.AvatarURL,
 			UserId:     usr.ID,
 			UserUID:    usr.UID,
 			AuthModule: identity.AuthenticatedBy,
@@ -491,6 +492,7 @@ func (s *UserSync) upsertAuthConnection(ctx context.Context, usr *user.User, ide
 	}
 
 	updateAuthInfoCmd := &login.UpdateAuthInfoCommand{
+		AvatarURL:  &identity.AvatarURL,
 		UserId:     usr.ID,
 		AuthId:     identity.AuthID,
 		AuthModule: identity.AuthenticatedBy,
